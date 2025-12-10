@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: diolab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: diolab
+  template:
+    metadata:
+      labels:
+        app: diolab
+    spec:
+      containers:
+      - name: diolab
+        image: celsojrss96/diolab:latest
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: diolab-service
+spec:
+  type: ClusterIP
+  selector:
+    app: diolab
+  ports:
+  - port: 3000
+    targetPort: 3000

@@ -1,0 +1,80 @@
+name: CI/CD - Simulação GitOps com ArgoCD
+
+on:
+  push:
+    branches: [ "kubernetes" ]
+  pull_request:
+    branches: [ "kubernetes" ]
+
+jobs:
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          cd app
+          npm install
+
+      - name: Run tests
+        run: |
+          cd app
+          npm test
+
+  build_and_push:
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: celsojrss96/diolab:latest
+
+  gitops_simulated:
+    runs-on: ubuntu-latest
+    needs: build_and_push
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Validar manifesto Kubernetes
+        run: |
+          echo "=== Validando YAML ==="
+          yamllint k8s/deployment.yml || true
+
+      - name: Simular atualização de versão no repositório GitOps
+        run: |
+          echo "=== Simulando commit GitOps ==="
+          NEW_IMAGE="celsojrss96/diolab:latest"
+          echo "ArgoCD detectaria a nova imagem: $NEW_IMAGE"
+          echo "Nenhuma alteração real será feita no repositório."
+
+      - name: Simular notificação ao ArgoCD
+        run: |
+          echo "=== Simulando webhook para o ArgoCD ==="
+          echo "POST https://argocd.example.com/api/v1/applications/diolab/sync"
+          echo "(Simulação - nenhum request será enviado)"
+
+      - name: Simular sincronização ArgoCD
+        run: |
+          echo "=== ARGOCD SYNC SIMULADO ==="
+          echo "[ArgoCD] Comparando estado desejado (Git) com estado atual (cluster)"
+          echo "[ArgoCD] Aplicando k8s/deployment.yml"
+          echo "[ArgoCD] Deployment sincronizado!"
+          echo "(Não houve deploy real)"
